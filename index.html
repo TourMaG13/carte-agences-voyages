@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte des Agences de Voyages</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<style>
+:root {
+  --blue: #0B5ED7;
+  --blue-light: #E8F0FE;
+  --blue-dark: #083B8A;
+  --green: #0F9D58;
+  --orange: #F5A623;
+  --dark: #1A1A2E;
+  --gray: #6B7280;
+  --gray-light: #F3F4F6;
+  --white: #FFFFFF;
+  --radius: 10px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.1);
+  --font: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Poppins:wght@300;400;500;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font); }
+body { display: flex; flex-direction: column; background: var(--gray-light); }
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+  color: var(--white);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+.header h1 {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.header .count {
+  background: rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.header .admin-link {
+  margin-left: auto;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+.header .admin-link:hover { color: #fff; }
+
+/* FILTERS BAR */
+.filters {
+  background: var(--white);
+  padding: 12px 24px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 999;
+}
+.filter-group { display: flex; flex-direction: column; gap: 3px; }
+.filter-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.filter-group select, .filter-group input {
+  padding: 8px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--dark);
+  background: var(--white);
+  min-width: 180px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.filter-group select:focus, .filter-group input:focus {
+  border-color: var(--blue);
+}
+.btn-reset {
+  padding: 8px 16px;
+  background: var(--gray-light);
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--gray);
+  cursor: pointer;
+  align-self: flex-end;
+  transition: all 0.2s;
+}
+.btn-reset:hover { background: #e5e7eb; color: var(--dark); }
+
+/* MAP */
+#map { flex: 1; z-index: 1; }
+
+/* CUSTOM MARKERS */
+.custom-marker {
+  width: 28px; height: 28px;
+  background: var(--blue);
+  border: 3px solid var(--white);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.custom-marker.has-reseau {
+  background: var(--green);
+}
+
+/* CLUSTER STYLES */
+.marker-cluster-small { background-color: rgba(11,94,215,0.2); }
+.marker-cluster-small div { background-color: var(--blue); color: #fff; }
+.marker-cluster-medium { background-color: rgba(15,157,88,0.2); }
+.marker-cluster-medium div { background-color: var(--green); color: #fff; }
+.marker-cluster-large { background-color: rgba(245,166,35,0.2); }
+.marker-cluster-large div { background-color: var(--orange); color: #fff; }
+
+/* POPUP */
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.leaflet-popup-content { margin: 0 !important; width: 300px !important; }
+.popup-card { font-family: var(--font); }
+.popup-header {
+  background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+  color: var(--white);
+  padding: 14px 16px;
+}
+.popup-header h3 {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.popup-header .immat {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+.popup-body { padding: 14px 16px; }
+.popup-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--dark);
+}
+.popup-row .icon {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  color: var(--blue);
+}
+.popup-row .label {
+  font-weight: 500;
+  color: var(--gray);
+  font-size: 11px;
+  display: block;
+}
+.popup-tag {
+  display: inline-block;
+  background: var(--blue-light);
+  color: var(--blue);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .header { padding: 10px 16px; }
+  .header h1 { font-size: 16px; }
+  .filters { padding: 10px 16px; gap: 8px; }
+  .filter-group select, .filter-group input { min-width: 140px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🗺️ Carte des Agences de Voyages</h1>
+  <span class="count" id="countBadge">Chargement...</span>
+  <a href="admin.html" class="admin-link">⚙️ Administration</a>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Recherche</label>
+    <input type="text" id="searchInput" placeholder="Nom, ville...">
+  </div>
+  <div class="filter-group">
+    <label>Réseau / Enseigne</label>
+    <select id="filterReseau"><option value="">Tous les réseaux</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Département</label>
+    <select id="filterDept"><option value="">Tous les départements</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Ville</label>
+    <select id="filterVille"><option value="">Toutes les villes</option></select>
+  </div>
+  <button class="btn-reset" id="btnReset">Réinitialiser</button>
+</div>
+
+<div id="map"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+// =====================================================================
+// FIREBASE CONFIG
+// =====================================================================
+firebase.initializeApp({
+  apiKey: "AIzaSyD9MCHHv9W5UMn1yCPWUvjTP0hlToQiYp4",
+  authDomain: "carte-agences-voyages.firebaseapp.com",
+  projectId: "carte-agences-voyages",
+  storageBucket: "carte-agences-voyages.firebasestorage.app",
+  messagingSenderId: "210534082113",
+  appId: "1:210534082113:web:743151844d4aa7634cc8c0"
+});
+const db = firebase.firestore();
+
+// =====================================================================
+// STATE
+// =====================================================================
+let ALL_AGENCES = [];
+let map, markerClusterGroup;
+
+// =====================================================================
+// INIT MAP
+// =====================================================================
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([46.8, 2.5], 6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a> | Données Atout France | TourMaG.com'
+  }).addTo(map);
+
+  markerClusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    chunkedLoading: true
+  });
+  map.addLayer(markerClusterGroup);
+}
+
+// =====================================================================
+// LOAD DATA
+// =====================================================================
+async function loadAgences() {
+  const snapshot = await db.collection('agences').get();
+  ALL_AGENCES = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  document.getElementById('countBadge').textContent = ALL_AGENCES.length + ' agences';
+  populateFilters();
+  applyFilters();
+}
+
+// =====================================================================
+// FILTERS
+// =====================================================================
+function populateFilters() {
+  const reseaux = [...new Set(ALL_AGENCES.map(a => a.reseau_normalise).filter(Boolean))].sort();
+  const depts = [...new Set(ALL_AGENCES.map(a => a.departement).filter(Boolean))].sort();
+  const villes = [...new Set(ALL_AGENCES.map(a => a.ville).filter(Boolean))].sort();
+
+  const selReseau = document.getElementById('filterReseau');
+  reseaux.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r; opt.textContent = r;
+    selReseau.appendChild(opt);
+  });
+
+  const selDept = document.getElementById('filterDept');
+  depts.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    selDept.appendChild(opt);
+  });
+
+  const selVille = document.getElementById('filterVille');
+  villes.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    selVille.appendChild(opt);
+  });
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  const reseau = document.getElementById('filterReseau').value;
+  const dept = document.getElementById('filterDept').value;
+  const ville = document.getElementById('filterVille').value;
+
+  let filtered = ALL_AGENCES;
+
+  if (search) {
+    filtered = filtered.filter(a =>
+      (a.denomination || '').toLowerCase().includes(search) ||
+      (a.ville || '').toLowerCase().includes(search) ||
+      (a.enseigne || '').toLowerCase().includes(search) ||
+      (a.immatriculation || '').toLowerCase().includes(search)
+    );
+  }
+  if (reseau) filtered = filtered.filter(a => a.reseau_normalise === reseau);
+  if (dept) filtered = filtered.filter(a => a.departement === dept);
+  if (ville) filtered = filtered.filter(a => a.ville === ville);
+
+  renderMarkers(filtered);
+  document.getElementById('countBadge').textContent = filtered.length + ' / ' + ALL_AGENCES.length + ' agences';
+}
+
+// =====================================================================
+// RENDER MARKERS
+// =====================================================================
+function renderMarkers(agences) {
+  markerClusterGroup.clearLayers();
+
+  agences.forEach(a => {
+    const lat = parseFloat(a.latitude);
+    const lng = parseFloat(a.longitude);
+    if (!lat || !lng) return;
+
+    const hasReseau = a.reseau_normalise && a.reseau_normalise.trim() !== '';
+    const icon = L.divIcon({
+      className: 'custom-marker' + (hasReseau ? ' has-reseau' : ''),
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    const marker = L.marker([lat, lng], { icon });
+    marker.bindPopup(() => createPopup(a), { maxWidth: 320 });
+    markerClusterGroup.addLayer(marker);
+  });
+}
+
+function createPopup(a) {
+  let html = '<div class="popup-card">';
+  html += '<div class="popup-header">';
+  html += '<h3>' + escHtml(a.denomination || 'Sans nom') + '</h3>';
+  html += '<div class="immat">' + escHtml(a.immatriculation || '') + '</div>';
+  html += '</div>';
+  html += '<div class="popup-body">';
+
+  if (a.enseigne) {
+    html += '<div class="popup-row"><span class="icon">🏷️</span><div><span class="label">Enseigne</span>' + escHtml(a.enseigne) + '</div></div>';
+  }
+  if (a.reseau_normalise) {
+    html += '<div class="popup-row"><span class="icon">🔗</span><div><span class="label">Réseau</span><span class="popup-tag">' + escHtml(a.reseau_normalise) + '</span></div></div>';
+  }
+
+  const adresse = [a.adresse, a.code_postal, a.ville].filter(Boolean).join(', ');
+  if (adresse) {
+    html += '<div class="popup-row"><span class="icon">📍</span><div><span class="label">Adresse</span>' + escHtml(adresse) + '</div></div>';
+  }
+
+  if (a.forme_juridique) {
+    html += '<div class="popup-row"><span class="icon">🏢</span><div><span class="label">Forme juridique</span>' + escHtml(a.forme_juridique) + '</div></div>';
+  }
+  if (a.siret) {
+    html += '<div class="popup-row"><span class="icon">📋</span><div><span class="label">SIRET</span>' + escHtml(a.siret) + '</div></div>';
+  }
+  if (a.garant) {
+    html += '<div class="popup-row"><span class="icon">🛡️</span><div><span class="label">Garant</span>' + escHtml(a.garant) + '</div></div>';
+  }
+  if (a.assureur) {
+    html += '<div class="popup-row"><span class="icon">🔒</span><div><span class="label">Assureur</span>' + escHtml(a.assureur) + '</div></div>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// =====================================================================
+// EVENTS
+// =====================================================================
+document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+document.getElementById('filterReseau').addEventListener('change', applyFilters);
+document.getElementById('filterDept').addEventListener('change', applyFilters);
+document.getElementById('filterVille').addEventListener('change', applyFilters);
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterReseau').value = '';
+  document.getElementById('filterDept').value = '';
+  document.getElementById('filterVille').value = '';
+  applyFilters();
+});
+
+function debounce(fn, ms) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+initMap();
+loadAgences();
+</script>
+</body>
+</html>
