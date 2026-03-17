@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Collection agences
+    match /agences/{agenceId} {
+
+      // Lecture publique (pour la carte)
+      allow read: if true;
+
+      // Écriture admin : l'admin peut tout modifier
+      allow write: if request.auth != null
+        && request.auth.token.email in ['admin@carte-agences.com'];
+
+      // Écriture agence : une agence peut modifier SA fiche uniquement
+      // (basé sur le champ email_compte dans le document)
+      allow update: if request.auth != null
+        && resource.data.email_compte == request.auth.token.email
+        // Limite les champs modifiables par l'agence
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['enseigne', 'adresse', 'code_postal', 'ville',
+                       'departement', 'adresse_complete', 'latitude', 'longitude']);
+    }
+  }
+}
