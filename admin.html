@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administration - Carte des Agences de Voyages</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Poppins:wght@300;400;500;600&display=swap');
+:root {
+  --blue: #0B5ED7; --blue-light: #E8F0FE; --blue-dark: #083B8A;
+  --green: #0F9D58; --green-light: #E6F4EA;
+  --orange: #F5A623; --red: #DC3545; --red-light: #FDE8E8;
+  --dark: #1A1A2E; --gray: #6B7280; --gray-light: #F3F4F6;
+  --white: #FFFFFF; --radius: 10px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  --font: 'Poppins', -apple-system, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--gray-light); min-height: 100vh; }
+
+/* LOGIN */
+.login-overlay {
+  position: fixed; inset: 0; background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.login-card {
+  background: var(--white); border-radius: 16px; padding: 48px 40px;
+  width: 400px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.login-card h2 {
+  font-family: 'Josefin Sans', sans-serif; font-size: 24px;
+  color: var(--dark); margin-bottom: 8px;
+}
+.login-card p { color: var(--gray); font-size: 14px; margin-bottom: 28px; }
+.login-card .form-group { margin-bottom: 16px; }
+.login-card label { font-size: 12px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+.login-card input {
+  width: 100%; padding: 12px 14px; border: 1.5px solid #e5e7eb;
+  border-radius: 8px; font-family: var(--font); font-size: 14px; outline: none;
+  transition: border-color 0.2s;
+}
+.login-card input:focus { border-color: var(--blue); }
+.login-card .btn-login {
+  width: 100%; padding: 14px; background: var(--blue); color: #fff;
+  border: none; border-radius: 8px; font-family: var(--font); font-size: 15px;
+  font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 8px;
+}
+.login-card .btn-login:hover { background: var(--blue-dark); }
+.login-error { color: var(--red); font-size: 13px; margin-top: 12px; display: none; }
+
+/* HEADER */
+.admin-header {
+  background: var(--white); border-bottom: 1px solid #e5e7eb;
+  padding: 14px 24px; display: flex; align-items: center; gap: 16px;
+}
+.admin-header h1 {
+  font-family: 'Josefin Sans', sans-serif; font-size: 20px; color: var(--dark);
+}
+.admin-header .role-badge {
+  padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+}
+.admin-header .role-badge.admin { background: var(--blue-light); color: var(--blue); }
+.admin-header .role-badge.agence { background: var(--green-light); color: var(--green); }
+.admin-header .spacer { flex: 1; }
+.admin-header .user-email { color: var(--gray); font-size: 13px; }
+.btn-logout {
+  padding: 8px 16px; background: var(--gray-light); border: 1px solid #e5e7eb;
+  border-radius: 8px; font-family: var(--font); font-size: 13px;
+  color: var(--gray); cursor: pointer; transition: all 0.2s;
+}
+.btn-logout:hover { background: #e5e7eb; }
+.btn-back {
+  padding: 8px 16px; background: var(--blue-light); border: 1px solid var(--blue);
+  border-radius: 8px; font-family: var(--font); font-size: 13px;
+  color: var(--blue); cursor: pointer; text-decoration: none; transition: all 0.2s;
+}
+.btn-back:hover { background: var(--blue); color: #fff; }
+
+/* MAIN LAYOUT */
+.admin-main { display: none; }
+.admin-content { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+/* TOOLBAR */
+.toolbar {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px;
+}
+.toolbar input, .toolbar select {
+  padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  font-family: var(--font); font-size: 13px; outline: none; transition: border-color 0.2s;
+}
+.toolbar input:focus, .toolbar select:focus { border-color: var(--blue); }
+.toolbar input { min-width: 250px; }
+.toolbar select { min-width: 180px; }
+.btn-primary {
+  padding: 10px 20px; background: var(--blue); color: #fff; border: none;
+  border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 0.2s;
+}
+.btn-primary:hover { background: var(--blue-dark); }
+.btn-danger {
+  padding: 8px 14px; background: var(--red-light); color: var(--red); border: 1px solid var(--red);
+  border-radius: 6px; font-family: var(--font); font-size: 12px; cursor: pointer; transition: all 0.2s;
+}
+.btn-danger:hover { background: var(--red); color: #fff; }
+.btn-small {
+  padding: 6px 14px; background: var(--blue-light); color: var(--blue); border: 1px solid var(--blue);
+  border-radius: 6px; font-family: var(--font); font-size: 12px; cursor: pointer; transition: all 0.2s;
+}
+.btn-small:hover { background: var(--blue); color: #fff; }
+
+/* TABLE */
+.table-wrap {
+  background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: var(--gray-light); }
+th {
+  padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600;
+  color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb; white-space: nowrap;
+}
+td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; color: var(--dark); vertical-align: top; }
+tr:hover td { background: #fafbfc; }
+.reseau-tag {
+  display: inline-block; background: var(--blue-light); color: var(--blue);
+  padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.pagination { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 20px; }
+.pagination button {
+  padding: 8px 14px; border: 1px solid #e5e7eb; border-radius: 6px;
+  background: var(--white); font-family: var(--font); font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+}
+.pagination button:hover { background: var(--blue-light); }
+.pagination button.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pagination span { font-size: 13px; color: var(--gray); }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 5000;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--white); border-radius: 16px; width: 600px; max-width: 95vw;
+  max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid #e5e7eb;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header h3 { font-family: 'Josefin Sans', sans-serif; font-size: 18px; color: var(--dark); }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: var(--gray-light); cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center; transition: background 0.2s;
+}
+.modal-close:hover { background: #e5e7eb; }
+.modal-body { padding: 24px; }
+.modal-body .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.modal-body .form-group { margin-bottom: 16px; }
+.modal-body .form-group.full { grid-column: 1 / -1; }
+.modal-body label {
+  display: block; font-size: 12px; font-weight: 600; color: var(--gray);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.modal-body input, .modal-body select {
+  width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  font-family: var(--font); font-size: 13px; outline: none; transition: border-color 0.2s;
+}
+.modal-body input:focus, .modal-body select:focus { border-color: var(--blue); }
+.modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; padding: 14px 24px;
+  border-radius: 10px; font-family: var(--font); font-size: 14px; font-weight: 500;
+  z-index: 9999; opacity: 0; transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--green); color: #fff; }
+.toast.error { background: var(--red); color: #fff; }
+
+/* AGENCE VIEW (for individual agence login) */
+.agence-view { display: none; }
+.agence-card {
+  background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 32px; max-width: 700px; margin: 0 auto;
+}
+.agence-card h2 {
+  font-family: 'Josefin Sans', sans-serif; font-size: 22px; color: var(--dark); margin-bottom: 24px;
+}
+.agence-card .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.agence-card .info-item label {
+  font-size: 11px; font-weight: 600; color: var(--gray);
+  text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;
+}
+.agence-card .info-item input {
+  width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  font-family: var(--font); font-size: 13px; outline: none;
+}
+.agence-card .info-item input:focus { border-color: var(--blue); }
+.agence-card .info-item input[readonly] { background: var(--gray-light); color: var(--gray); }
+
+@media (max-width: 768px) {
+  .modal-body .form-row { grid-template-columns: 1fr; }
+  .agence-card .info-grid { grid-template-columns: 1fr; }
+  .toolbar { flex-direction: column; }
+  .toolbar input, .toolbar select { min-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <h2>🔐 Connexion</h2>
+    <p>Accès réservé aux administrateurs TourMaG et aux agences.</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="votre@email.com">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+    </div>
+    <button class="btn-login" id="btnLogin">Se connecter</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ADMIN MAIN -->
+<div class="admin-main" id="adminMain">
+  <div class="admin-header">
+    <h1>⚙️ Administration</h1>
+    <span class="role-badge admin" id="roleBadge">Admin</span>
+    <div class="spacer"></div>
+    <a href="index.html" class="btn-back">← Voir la carte</a>
+    <span class="user-email" id="userEmail"></span>
+    <button class="btn-logout" id="btnLogout">Déconnexion</button>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div class="admin-content" id="adminView">
+    <div class="toolbar">
+      <input type="text" id="adminSearch" placeholder="Rechercher une agence...">
+      <select id="adminFilterReseau"><option value="">Tous les réseaux</option></select>
+      <select id="adminFilterDept"><option value="">Tous les départements</option></select>
+      <button class="btn-primary" id="btnAddAgence">+ Ajouter une agence</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dénomination</th>
+            <th>Immatriculation</th>
+            <th>Ville</th>
+            <th>Département</th>
+            <th>Réseau</th>
+            <th>Garant</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="agenceTable"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- AGENCE INDIVIDUAL VIEW -->
+  <div class="agence-view" id="agenceView">
+    <div class="admin-content">
+      <div class="agence-card">
+        <h2 id="agenceViewTitle">Ma fiche agence</h2>
+        <div class="info-grid" id="agenceForm"></div>
+        <div style="margin-top:24px; display:flex; gap:12px;">
+          <button class="btn-primary" id="btnSaveAgence">Enregistrer les modifications</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Modifier l'agence</h3>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Dénomination</label>
+          <input type="text" id="editDenomination">
+        </div>
+        <div class="form-group">
+          <label>Immatriculation</label>
+          <input type="text" id="editImmatriculation" readonly>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Enseigne / Nom commercial</label>
+          <input type="text" id="editEnseigne">
+        </div>
+        <div class="form-group">
+          <label>Réseau normalisé</label>
+          <input type="text" id="editReseau">
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>Adresse</label>
+        <input type="text" id="editAdresse">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Code postal</label>
+          <input type="text" id="editCP">
+        </div>
+        <div class="form-group">
+          <label>Ville</label>
+          <input type="text" id="editVille">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>SIRET</label>
+          <input type="text" id="editSiret">
+        </div>
+        <div class="form-group">
+          <label>Forme juridique</label>
+          <input type="text" id="editForme">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Garant</label>
+          <input type="text" id="editGarant">
+        </div>
+        <div class="form-group">
+          <label>Assureur</label>
+          <input type="text" id="editAssureur">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Latitude</label>
+          <input type="text" id="editLat">
+        </div>
+        <div class="form-group">
+          <label>Longitude</label>
+          <input type="text" id="editLng">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-logout" id="btnCancelEdit">Annuler</button>
+      <button class="btn-primary" id="btnSaveEdit">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+// =====================================================================
+// CONFIG
+// =====================================================================
+firebase.initializeApp({
+  apiKey: "AIzaSyD9MCHHv9W5UMn1yCPWUvjTP0hlToQiYp4",
+  authDomain: "carte-agences-voyages.firebaseapp.com",
+  projectId: "carte-agences-voyages",
+  storageBucket: "carte-agences-voyages.firebasestorage.app",
+  messagingSenderId: "210534082113",
+  appId: "1:210534082113:web:743151844d4aa7634cc8c0"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Admin email(s) - add more as needed
+const ADMIN_EMAILS = ['admin@carte-agences.com'];
+
+// =====================================================================
+// STATE
+// =====================================================================
+let currentUser = null;
+let isAdmin = false;
+let agenceId = null; // for agence-level users
+let ALL_AGENCES = [];
+let currentPage = 1;
+const PAGE_SIZE = 50;
+let editingDocId = null;
+
+// =====================================================================
+// AUTH
+// =====================================================================
+document.getElementById('btnLogin').addEventListener('click', doLogin);
+document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pwd = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  try {
+    await auth.signInWithEmailAndPassword(email, pwd);
+  } catch (e) {
+    errEl.textContent = 'Email ou mot de passe incorrect.';
+    errEl.style.display = 'block';
+  }
+}
+
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('adminMain').style.display = 'none';
+    return;
+  }
+  currentUser = user;
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('adminMain').style.display = 'block';
+  document.getElementById('userEmail').textContent = user.email;
+
+  // Check role
+  if (ADMIN_EMAILS.includes(user.email)) {
+    isAdmin = true;
+    document.getElementById('roleBadge').textContent = 'Admin';
+    document.getElementById('roleBadge').className = 'role-badge admin';
+    document.getElementById('adminView').style.display = 'block';
+    document.getElementById('agenceView').style.display = 'none';
+    await loadAllAgences();
+  } else {
+    isAdmin = false;
+    document.getElementById('roleBadge').textContent = 'Agence';
+    document.getElementById('roleBadge').className = 'role-badge agence';
+    document.getElementById('adminView').style.display = 'none';
+    document.getElementById('agenceView').style.display = 'block';
+    document.getElementById('btnAddAgence').style.display = 'none';
+    await loadAgenceView(user.email);
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click', () => auth.signOut());
+
+// =====================================================================
+// ADMIN: LOAD ALL
+// =====================================================================
+async function loadAllAgences() {
+  const snap = await db.collection('agences').get();
+  ALL_AGENCES = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  populateAdminFilters();
+  renderTable();
+}
+
+function populateAdminFilters() {
+  const reseaux = [...new Set(ALL_AGENCES.map(a => a.reseau_normalise).filter(Boolean))].sort();
+  const depts = [...new Set(ALL_AGENCES.map(a => a.departement).filter(Boolean))].sort();
+
+  const selR = document.getElementById('adminFilterReseau');
+  selR.innerHTML = '<option value="">Tous les réseaux</option>';
+  reseaux.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; selR.appendChild(o); });
+
+  const selD = document.getElementById('adminFilterDept');
+  selD.innerHTML = '<option value="">Tous les départements</option>';
+  depts.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; selD.appendChild(o); });
+}
+
+// =====================================================================
+// ADMIN: TABLE
+// =====================================================================
+function getFilteredAgences() {
+  const search = document.getElementById('adminSearch').value.toLowerCase().trim();
+  const reseau = document.getElementById('adminFilterReseau').value;
+  const dept = document.getElementById('adminFilterDept').value;
+  let list = ALL_AGENCES;
+  if (search) list = list.filter(a =>
+    (a.denomination || '').toLowerCase().includes(search) ||
+    (a.ville || '').toLowerCase().includes(search) ||
+    (a.immatriculation || '').toLowerCase().includes(search)
+  );
+  if (reseau) list = list.filter(a => a.reseau_normalise === reseau);
+  if (dept) list = list.filter(a => a.departement === dept);
+  return list;
+}
+
+function renderTable() {
+  const filtered = getFilteredAgences();
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  if (currentPage > totalPages) currentPage = 1;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById('agenceTable');
+  tbody.innerHTML = page.map(a => `
+    <tr>
+      <td><strong>${esc(a.denomination || '')}</strong></td>
+      <td>${esc(a.immatriculation || '')}</td>
+      <td>${esc(a.ville || '')}</td>
+      <td>${esc(a.departement || '')}</td>
+      <td>${a.reseau_normalise ? '<span class="reseau-tag">' + esc(a.reseau_normalise) + '</span>' : '<span style="color:#ccc">—</span>'}</td>
+      <td>${esc(a.garant || '')}</td>
+      <td>
+        <button class="btn-small" onclick="openEdit('${a.id}')">Modifier</button>
+        <button class="btn-danger" onclick="deleteAgence('${a.id}','${esc(a.denomination)}')">Suppr.</button>
+      </td>
+    </tr>
+  `).join('');
+
+  // Pagination
+  const pagDiv = document.getElementById('pagination');
+  pagDiv.innerHTML = '';
+  if (totalPages > 1) {
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '← Précédent';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { currentPage--; renderTable(); };
+    pagDiv.appendChild(prevBtn);
+
+    const info = document.createElement('span');
+    info.textContent = `Page ${currentPage} / ${totalPages} (${filtered.length} résultats)`;
+    pagDiv.appendChild(info);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'Suivant →';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => { currentPage++; renderTable(); };
+    pagDiv.appendChild(nextBtn);
+  }
+}
+
+document.getElementById('adminSearch').addEventListener('input', () => { currentPage = 1; renderTable(); });
+document.getElementById('adminFilterReseau').addEventListener('change', () => { currentPage = 1; renderTable(); });
+document.getElementById('adminFilterDept').addEventListener('change', () => { currentPage = 1; renderTable(); });
+
+// =====================================================================
+// ADMIN: EDIT MODAL
+// =====================================================================
+function openEdit(docId) {
+  const a = ALL_AGENCES.find(x => x.id === docId);
+  if (!a) return;
+  editingDocId = docId;
+  document.getElementById('modalTitle').textContent = 'Modifier : ' + (a.denomination || '');
+  document.getElementById('editDenomination').value = a.denomination || '';
+  document.getElementById('editImmatriculation').value = a.immatriculation || '';
+  document.getElementById('editEnseigne').value = a.enseigne || '';
+  document.getElementById('editReseau').value = a.reseau_normalise || '';
+  document.getElementById('editAdresse').value = a.adresse || '';
+  document.getElementById('editCP').value = a.code_postal || '';
+  document.getElementById('editVille').value = a.ville || '';
+  document.getElementById('editSiret').value = a.siret || '';
+  document.getElementById('editForme').value = a.forme_juridique || '';
+  document.getElementById('editGarant').value = a.garant || '';
+  document.getElementById('editAssureur').value = a.assureur || '';
+  document.getElementById('editLat').value = a.latitude || '';
+  document.getElementById('editLng').value = a.longitude || '';
+  document.getElementById('editModal').classList.add('active');
+}
+
+function openAddNew() {
+  editingDocId = null;
+  document.getElementById('modalTitle').textContent = 'Ajouter une agence';
+  ['editDenomination','editImmatriculation','editEnseigne','editReseau','editAdresse','editCP','editVille','editSiret','editForme','editGarant','editAssureur','editLat','editLng'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('editImmatriculation').removeAttribute('readonly');
+  document.getElementById('editModal').classList.add('active');
+}
+
+document.getElementById('btnAddAgence').addEventListener('click', openAddNew);
+document.getElementById('modalClose').addEventListener('click', () => document.getElementById('editModal').classList.remove('active'));
+document.getElementById('btnCancelEdit').addEventListener('click', () => document.getElementById('editModal').classList.remove('active'));
+
+document.getElementById('btnSaveEdit').addEventListener('click', async () => {
+  const data = {
+    denomination: document.getElementById('editDenomination').value.trim(),
+    immatriculation: document.getElementById('editImmatriculation').value.trim(),
+    enseigne: document.getElementById('editEnseigne').value.trim(),
+    reseau_normalise: document.getElementById('editReseau').value.trim(),
+    adresse: document.getElementById('editAdresse').value.trim(),
+    code_postal: document.getElementById('editCP').value.trim(),
+    ville: document.getElementById('editVille').value.trim(),
+    departement: document.getElementById('editCP').value.trim().substring(0, 2),
+    siret: document.getElementById('editSiret').value.trim(),
+    forme_juridique: document.getElementById('editForme').value.trim(),
+    garant: document.getElementById('editGarant').value.trim(),
+    assureur: document.getElementById('editAssureur').value.trim(),
+    latitude: document.getElementById('editLat').value.trim(),
+    longitude: document.getElementById('editLng').value.trim(),
+    adresse_complete: document.getElementById('editAdresse').value.trim() + ' ' + document.getElementById('editCP').value.trim() + ' ' + document.getElementById('editVille').value.trim()
+  };
+
+  try {
+    if (editingDocId) {
+      await db.collection('agences').doc(editingDocId).update(data);
+      toast('Agence mise à jour', 'success');
+    } else {
+      const docId = data.immatriculation || Date.now().toString();
+      await db.collection('agences').doc(docId).set(data);
+      toast('Agence ajoutée', 'success');
+    }
+    document.getElementById('editModal').classList.remove('active');
+    await loadAllAgences();
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'error');
+  }
+});
+
+// =====================================================================
+// ADMIN: DELETE
+// =====================================================================
+async function deleteAgence(docId, name) {
+  if (!confirm('Supprimer l\'agence "' + name + '" ?')) return;
+  try {
+    await db.collection('agences').doc(docId).delete();
+    toast('Agence supprimée', 'success');
+    await loadAllAgences();
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// =====================================================================
+// AGENCE VIEW (individual)
+// =====================================================================
+async function loadAgenceView(email) {
+  // Find agence linked to this email
+  const snap = await db.collection('agences').where('email_compte', '==', email).get();
+  if (snap.empty) {
+    document.getElementById('agenceViewTitle').textContent = 'Aucune agence liée à ce compte.';
+    document.getElementById('agenceForm').innerHTML = '<p style="color:#888">Contactez l\'administrateur TourMaG pour associer votre compte à une fiche agence.</p>';
+    return;
+  }
+
+  const doc = snap.docs[0];
+  agenceId = doc.id;
+  const a = doc.data();
+  document.getElementById('agenceViewTitle').textContent = a.denomination || 'Ma fiche agence';
+
+  const fields = [
+    { key: 'denomination', label: 'Dénomination', readonly: true },
+    { key: 'immatriculation', label: 'Immatriculation', readonly: true },
+    { key: 'enseigne', label: 'Enseigne / Nom commercial', readonly: false },
+    { key: 'reseau_normalise', label: 'Réseau', readonly: true },
+    { key: 'adresse', label: 'Adresse', readonly: false },
+    { key: 'code_postal', label: 'Code postal', readonly: false },
+    { key: 'ville', label: 'Ville', readonly: false },
+    { key: 'siret', label: 'SIRET', readonly: true },
+    { key: 'forme_juridique', label: 'Forme juridique', readonly: true },
+    { key: 'garant', label: 'Garant', readonly: true },
+    { key: 'assureur', label: 'Assureur', readonly: true },
+  ];
+
+  document.getElementById('agenceForm').innerHTML = fields.map(f => `
+    <div class="info-item">
+      <label>${f.label}</label>
+      <input type="text" id="agField_${f.key}" value="${esc(a[f.key] || '')}" ${f.readonly ? 'readonly' : ''}>
+    </div>
+  `).join('');
+}
+
+document.getElementById('btnSaveAgence').addEventListener('click', async () => {
+  if (!agenceId) return;
+  try {
+    const data = {
+      enseigne: document.getElementById('agField_enseigne').value.trim(),
+      adresse: document.getElementById('agField_adresse').value.trim(),
+      code_postal: document.getElementById('agField_code_postal').value.trim(),
+      ville: document.getElementById('agField_ville').value.trim(),
+    };
+    data.departement = data.code_postal.substring(0, 2);
+    data.adresse_complete = data.adresse + ' ' + data.code_postal + ' ' + data.ville;
+    await db.collection('agences').doc(agenceId).update(data);
+    toast('Fiche mise à jour', 'success');
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'error');
+  }
+});
+
+// =====================================================================
+// UTILS
+// =====================================================================
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
