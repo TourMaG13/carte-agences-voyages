@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Import CSV - Agences de Voyages</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+:root { --blue: #0B5ED7; --blue-dark: #083B8A; --green: #0F9D58; --red: #DC3545; --dark: #1A1A2E; --gray: #6B7280; --white: #FFF; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Poppins', sans-serif; background: #f5f7fa; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.card { background: var(--white); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); max-width: 600px; width: 100%; padding: 40px; }
+h1 { font-size: 22px; color: var(--dark); margin-bottom: 8px; }
+.subtitle { color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--gray); text-transform: uppercase; display: block; margin-bottom: 6px; }
+.form-group input { width: 100%; padding: 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 14px; outline: none; }
+.form-group input:focus { border-color: var(--blue); }
+.btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-bottom: 12px; }
+.btn-blue { background: var(--blue); color: #fff; }
+.btn-blue:hover { background: var(--blue-dark); }
+.btn-blue:disabled { background: #ccc; cursor: not-allowed; }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:disabled { background: #ccc; cursor: not-allowed; }
+.drop-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; margin-bottom: 16px; transition: all 0.2s; }
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--blue); background: #e8f0fe; }
+.drop-zone p { color: var(--gray); font-size: 14px; }
+.drop-zone .filename { color: var(--blue); font-weight: 600; margin-top: 8px; }
+input[type="file"] { display: none; }
+.progress-area { display: none; margin-top: 20px; }
+.progress-bar { background: #e0e0e0; border-radius: 8px; height: 12px; overflow: hidden; margin: 8px 0; }
+.progress-fill { background: linear-gradient(90deg, var(--blue), var(--green)); height: 100%; width: 0%; transition: width 0.3s; border-radius: 8px; }
+.status { font-size: 14px; color: var(--dark); }
+.log { margin-top: 16px; max-height: 200px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 12px; font-size: 12px; font-family: monospace; color: var(--gray); }
+.section { padding: 16px 0; border-top: 1px solid #e5e7eb; margin-top: 16px; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- LOGIN -->
+  <div id="loginSection">
+    <h1>📥 Import CSV</h1>
+    <p class="subtitle">Connectez-vous en tant qu'admin pour importer les agences.</p>
+    <div class="form-group">
+      <label>Email admin</label>
+      <input type="email" id="loginEmail" placeholder="admin@carte-agences.com">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+    </div>
+    <button class="btn btn-blue" id="btnLogin">Se connecter</button>
+    <p id="loginError" style="color:#DC3545; font-size:13px; display:none;"></p>
+  </div>
+
+  <!-- IMPORT -->
+  <div id="importSection" class="hidden">
+    <h1>📥 Import CSV → Firestore</h1>
+    <p class="subtitle">Sélectionne le fichier agences_geocoded.csv</p>
+
+    <div class="drop-zone" id="dropZone">
+      <p>📄 Glisse ton CSV ici ou clique pour le sélectionner</p>
+      <div class="filename" id="fileName"></div>
+    </div>
+    <input type="file" id="fileInput" accept=".csv">
+
+    <button class="btn btn-green" id="btnImport" disabled>Lancer l'import</button>
+
+    <div class="progress-area" id="progressArea">
+      <div class="status" id="statusText">Préparation...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyD9MCHHv9W5UMn1yCPWUvjTP0hlToQiYp4",
+  authDomain: "carte-agences-voyages.firebaseapp.com",
+  projectId: "carte-agences-voyages",
+  storageBucket: "carte-agences-voyages.firebasestorage.app",
+  messagingSenderId: "210534082113",
+  appId: "1:210534082113:web:743151844d4aa7634cc8c0"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let csvData = null;
+
+// LOGIN
+document.getElementById('btnLogin').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pwd = document.getElementById('loginPassword').value;
+  try {
+    await auth.signInWithEmailAndPassword(email, pwd);
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('importSection').classList.remove('hidden');
+  } catch (e) {
+    const err = document.getElementById('loginError');
+    err.textContent = 'Connexion échouée : ' + e.message;
+    err.style.display = 'block';
+  }
+});
+
+// FILE HANDLING
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  document.getElementById('fileName').textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' Ko)';
+  file.text().then(text => {
+    csvData = parseCSV(text);
+    document.getElementById('btnImport').disabled = false;
+    log('CSV chargé : ' + csvData.length + ' lignes détectées.');
+  });
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const headers = parseCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = (vals[i] || '').trim());
+    return obj;
+  });
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQuotes = !inQuotes; }
+    else if (c === ',' && !inQuotes) { result.push(current); current = ''; }
+    else { current += c; }
+  }
+  result.push(current);
+  return result;
+}
+
+// IMPORT
+document.getElementById('btnImport').addEventListener('click', async () => {
+  if (!csvData || csvData.length === 0) return;
+
+  document.getElementById('btnImport').disabled = true;
+  document.getElementById('progressArea').style.display = 'block';
+
+  const total = csvData.length;
+  let success = 0;
+  let errors = 0;
+  const batchSize = 400; // Firestore batch limit is 500
+
+  for (let i = 0; i < total; i += batchSize) {
+    const batch = db.batch();
+    const chunk = csvData.slice(i, i + batchSize);
+
+    chunk.forEach(row => {
+      const docId = row.immatriculation || ('auto_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6));
+      const ref = db.collection('agences').doc(docId);
+      batch.set(ref, {
+        denomination: row.denomination || '',
+        immatriculation: row.immatriculation || '',
+        date_immatriculation: row.date_immatriculation || '',
+        sigle: row.sigle || '',
+        enseigne: row.enseigne || '',
+        reseau_normalise: row.reseau_normalise || '',
+        siret: row.siret || '',
+        forme_juridique: row.forme_juridique || '',
+        adresse: row.adresse || '',
+        code_postal: row.code_postal || '',
+        ville: row.ville || '',
+        departement: row.departement || '',
+        garant: row.garant || '',
+        assureur: row.assureur || '',
+        adresse_complete: row.adresse_complete || '',
+        latitude: row.latitude || '',
+        longitude: row.longitude || '',
+      }, { merge: true });
+    });
+
+    try {
+      await batch.commit();
+      success += chunk.length;
+      log('Lot ' + Math.floor(i / batchSize + 1) + ' importé (' + success + '/' + total + ')');
+    } catch (e) {
+      errors += chunk.length;
+      log('ERREUR lot ' + Math.floor(i / batchSize + 1) + ' : ' + e.message);
+    }
+
+    const pct = Math.min(100, Math.round(((i + batchSize) / total) * 100));
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('statusText').textContent = success + ' / ' + total + ' agences importées...';
+  }
+
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('statusText').textContent = '✅ Terminé ! ' + success + ' agences importées, ' + errors + ' erreurs.';
+  log('Import terminé : ' + success + ' succès, ' + errors + ' erreurs.');
+});
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent += (el.textContent ? '\n' : '') + '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  el.scrollTop = el.scrollHeight;
+}
+</script>
+</body>
+</html>
